@@ -2,21 +2,26 @@ package chunk
 
 import (
 	"fmt"
+
+	"github.com/VictorMilhomem/golox/cmd/values"
 )
 
 type Opcode byte
 
 const (
 	OpReturn Opcode = iota
+	OpConstant
 )
 
 type Chunk struct {
-	code []byte
+	code      []byte
+	constants *values.ValueArray
 }
 
 func NewChunk() *Chunk {
 	return &Chunk{
-		code: []byte{},
+		code:      []byte{},
+		constants: values.NewValueArray(),
 	}
 }
 
@@ -27,7 +32,13 @@ func (c *Chunk) WriteChunk(_byte byte) error {
 
 func (c *Chunk) FreeChunk() error {
 	c.code = []byte{}
+	c.constants.FreeValueArray()
 	return nil
+}
+
+func (c *Chunk) AddConstant(value values.Value) int {
+	c.constants.WriteValueArray(value)
+	return len(c.constants.GetValues()) - 1
 }
 
 func (c *Chunk) DisassembleChunk(name string) error {
@@ -51,6 +62,8 @@ func (c *Chunk) DisassembleInstruction(offset int) (int, error) {
 	switch instruction {
 	case byte(OpReturn):
 		return simpleInstruction("OP_RETURN", offset), nil
+	case byte(OpConstant):
+		return constantInstruction("OP_CONSTANT", c, offset), nil
 	default:
 		return offset + 1, fmt.Errorf("unknown opcode %d", instruction)
 	}
@@ -59,4 +72,12 @@ func (c *Chunk) DisassembleInstruction(offset int) (int, error) {
 func simpleInstruction(name string, offset int) int {
 	fmt.Printf("%s\n", name)
 	return offset + 1
+}
+
+func constantInstruction(name string, chunk *Chunk, offset int) int {
+	constant := chunk.code[offset+1]
+	fmt.Printf("%-16s %4d '", name, constant)
+	values.PrintValue(chunk.constants.GetValues()[constant])
+	fmt.Println("'")
+	return offset + 2
 }
