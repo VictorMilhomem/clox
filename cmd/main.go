@@ -7,9 +7,9 @@ import (
 func main() {
 	ck := chunk.NewChunk()
 	constant := ck.AddConstant(1.2)
-	ck.WriteChunk(byte(chunk.OpConstant))
-	ck.WriteChunk(byte(constant))
-	ck.WriteChunk(byte(chunk.OpReturn))
+	ck.WriteChunk(byte(chunk.OpConstant), 123)
+	ck.WriteChunk(byte(constant), 123)
+	ck.WriteChunk(byte(chunk.OpReturn), 123)
 	ck.DisassembleChunk("test chunk")
 	ck.FreeChunk()
 }
