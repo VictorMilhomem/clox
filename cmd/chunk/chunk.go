@@ -16,26 +16,27 @@ const (
 type Chunk struct {
 	code      []byte
 	constants *values.ValueArray
-	lines     []int
+	lines     map[int]int
 }
 
 func NewChunk() *Chunk {
 	return &Chunk{
 		code:      []byte{},
 		constants: values.NewValueArray(),
-		lines:     []int{},
+		lines:     make(map[int]int),
 	}
 }
 
 func (c *Chunk) WriteChunk(_byte byte, line int) error {
 	c.code = append(c.code, _byte)
-	c.lines = append(c.lines, line)
+	c.lines[len(c.code)-1] = line
 	return nil
 }
 
 func (c *Chunk) FreeChunk() error {
 	c.code = []byte{}
 	c.constants.FreeValueArray()
+	c.lines = make(map[int]int)
 	return nil
 }
 
@@ -61,10 +62,11 @@ func (c *Chunk) DisassembleChunk(name string) error {
 func (c *Chunk) DisassembleInstruction(offset int) (int, error) {
 	fmt.Printf("%04d ", offset)
 
-	if offset > 0 && c.lines[offset] == c.lines[offset-1] {
+	line, ok := c.lines[offset]
+	if !ok {
 		fmt.Printf("    | ")
 	} else {
-		fmt.Printf("%4d ", c.lines[offset])
+		fmt.Printf("%4d ", line)
 	}
 
 	instruction := c.code[offset]
