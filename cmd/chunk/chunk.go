@@ -27,6 +27,18 @@ func NewChunk() *Chunk {
 	}
 }
 
+func (c *Chunk) GetCode() []byte {
+	return c.code
+}
+
+func (c *Chunk) GetConstants() *values.ValueArray {
+	return c.constants
+}
+
+func (c *Chunk) GetLines() map[int]int {
+	return c.lines
+}
+
 func (c *Chunk) WriteChunk(_byte byte, line int) error {
 	c.code = append(c.code, _byte)
 	c.lines[len(c.code)-1] = line
