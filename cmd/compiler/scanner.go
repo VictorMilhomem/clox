@@ -1,5 +1,10 @@
 package compiler
 
+import (
+	"regexp"
+	"unicode"
+)
+
 type TokenType int
 
 const (
@@ -96,6 +101,12 @@ func (s *Scanner) scanToken() Token {
 	}
 
 	char := s.advance()
+	if s.isAlpha(char) {
+		return s.identifier()
+	}
+	if unicode.IsDigit(char) {
+		return s.number()
+	}
 
 	switch char {
 	case '(':
@@ -140,13 +151,15 @@ func (s *Scanner) scanToken() Token {
 			return s.makeToken(TOKEN_GREATER_EQUAL)
 		}
 		return s.makeToken(TOKEN_GREATER)
+	case '"':
+		return s.str()
 	}
 
 	return s.errorToken("unexpected character")
 }
 
 func (s *Scanner) isAtEnd() bool {
-	return s.at == s.length
+	return s.current == '\x00'
 }
 
 func (s *Scanner) makeToken(token TokenType) Token {
@@ -198,6 +211,109 @@ func (s *Scanner) skipWhiteSpace() {
 			return
 		}
 	}
+}
+
+func (s *Scanner) isAlpha(char rune) bool {
+	return unicode.IsLetter(char) || char == '_'
+}
+
+func (s *Scanner) identifier() Token {
+	for s.isAlpha(s.peek()) || unicode.IsDigit(s.peek()) {
+		s.advance()
+	}
+	return s.makeToken(s.identifierType())
+}
+
+func (s *Scanner) identifierType() TokenType {
+	switch s.source[0] {
+	case 'a':
+		return s.checkKeyword(1, 2, "nd", TOKEN_AND)
+	case 'c':
+		return s.checkKeyword(1, 4, "lass", TOKEN_CLASS)
+	case 'e':
+		return s.checkKeyword(1, 3, "lse", TOKEN_ELSE)
+	case 'f':
+		{
+			switch s.source[1] {
+			case 'a':
+				return s.checkKeyword(2, 3, "lse", TOKEN_FALSE)
+			case 'o':
+				return s.checkKeyword(2, 1, "r", TOKEN_FOR)
+			case 'u':
+				return s.checkKeyword(2, 1, "n", TOKEN_FUN)
+			}
+		}
+	case 'i':
+		return s.checkKeyword(1, 1, "f", TOKEN_IF)
+	case 'n':
+		return s.checkKeyword(1, 2, "il", TOKEN_NIL)
+	case 'o':
+		return s.checkKeyword(1, 1, "r", TOKEN_OR)
+	case 'p':
+		return s.checkKeyword(1, 4, "rint", TOKEN_PRINT)
+	case 'r':
+		return s.checkKeyword(1, 5, "eturn", TOKEN_RETURN)
+	case 's':
+		return s.checkKeyword(1, 4, "uper", TOKEN_SUPER)
+	case 't':
+		{
+			switch s.source[1] {
+			case 'h':
+				return s.checkKeyword(2, 2, "is", TOKEN_THIS)
+			case 'r':
+				return s.checkKeyword(2, 2, "ue", TOKEN_TRUE)
+			}
+		}
+	case 'v':
+		return s.checkKeyword(1, 2, "ar", TOKEN_VAR)
+	case 'w':
+		return s.checkKeyword(1, 4, "hile", TOKEN_WHILE)
+
+	}
+	return TOKEN_IDENTIFIER
+}
+
+func (s *Scanner) checkKeyword(start, length int, rest string, tokenType TokenType) TokenType {
+	pattern := "^" + rest + "$"
+	re := regexp.MustCompile(pattern)
+
+	keyword := string(s.source[start : start+length])
+
+	if re.MatchString(keyword) {
+		return tokenType
+	}
+
+	return TOKEN_IDENTIFIER
+}
+
+func (s *Scanner) number() Token {
+	for unicode.IsDigit(s.peek()) {
+		s.advance()
+	}
+
+	if s.peek() == '.' && unicode.IsDigit(s.peekNext()) {
+		s.advance()
+		for unicode.IsDigit(s.peek()) {
+			s.advance()
+		}
+	}
+
+	return s.makeToken(TOKEN_NUMBER)
+}
+
+func (s *Scanner) str() Token {
+	for s.peek() != '"' && !s.isAtEnd() {
+		if s.peek() == '\n' {
+			s.line++
+		}
+		s.advance()
+	}
+
+	if s.isAtEnd() {
+		return s.errorToken("unterminated string")
+	}
+	s.advance()
+	return s.makeToken(TOKEN_STRING)
 }
 
 func (s *Scanner) peek() rune {
