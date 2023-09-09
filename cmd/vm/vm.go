@@ -38,6 +38,9 @@ func (vm *VM) InitVM() error {
 }
 
 func (vm *VM) FreeVM() error {
+	vm.chunk = chunk.NewChunk()
+	vm.ip = 0
+	vm.resetStack()
 	return nil
 }
 
@@ -45,9 +48,7 @@ func (vm *VM) resetStack() {
 	vm.stack = stack.New()
 }
 
-func (vm *VM) Interpret(chunk *chunk.Chunk) (InterpretResult, error) {
-	vm.chunk = chunk
-	vm.ip = vm.chunk.GetCode()[0]
+func (vm *VM) Interpret(source string) (InterpretResult, error) {
 	return vm.run(), nil
 }
 
