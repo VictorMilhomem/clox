@@ -10,6 +10,10 @@ type Opcode byte
 
 const (
 	OpConstant Opcode = iota
+	OpAdd
+	OpSub
+	OpMultiply
+	OpDivide
 	OpNegate
 	OpReturn
 )
@@ -87,6 +91,14 @@ func (c *Chunk) DisassembleInstruction(offset int) (int, error) {
 	switch instruction {
 	case byte(OpConstant):
 		return constantInstruction("OP_CONSTANT", c, offset), nil
+	case byte(OpAdd):
+		return simpleInstruction("OP_ADD", offset), nil
+	case byte(OpSub):
+		return simpleInstruction("OP_SUB", offset), nil
+	case byte(OpMultiply):
+		return simpleInstruction("OP_MULTIPLY", offset), nil
+	case byte(OpDivide):
+		return simpleInstruction("OP_DIVIDE", offset), nil
 	case byte(OpNegate):
 		return simpleInstruction("OP_NEGATE", offset), nil
 	case byte(OpReturn):

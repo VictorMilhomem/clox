@@ -65,6 +65,14 @@ func (vm *VM) run() InterpretResult {
 				constant := vm.readConstant()
 				vm.stack.Push(constant)
 			}
+		case byte(chunk.OpAdd):
+			vm.binaryOp("+")
+		case byte(chunk.OpSub):
+			vm.binaryOp("-")
+		case byte(chunk.OpMultiply):
+			vm.binaryOp("*")
+		case byte(chunk.OpDivide):
+			vm.binaryOp("/")
 		case byte(chunk.OpNegate):
 			{
 				value, _ := vm.stack.Pop().(values.Value)
@@ -75,6 +83,29 @@ func (vm *VM) run() InterpretResult {
 			values.PrintValue(value)
 			fmt.Println()
 			return IntepretOk
+		}
+	}
+}
+
+func (vm *VM) binaryOp(op string) {
+	b, _ := vm.stack.Pop().(values.Value)
+	a, _ := vm.stack.Pop().(values.Value)
+	switch op {
+	case "+":
+		{
+			vm.stack.Push(a + b)
+		}
+	case "-":
+		{
+			vm.stack.Push(a - b)
+		}
+	case "*":
+		{
+			vm.stack.Push(a * b)
+		}
+	case "/":
+		{
+			vm.stack.Push(a / b)
 		}
 	}
 }
