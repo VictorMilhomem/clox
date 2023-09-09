@@ -65,6 +65,7 @@ type Token struct {
 
 type Scanner struct {
 	source  []rune
+	lexeme  []rune
 	start   rune
 	current rune
 	length  int
@@ -94,6 +95,8 @@ func NewScanner(source []rune) *Scanner {
 
 func (s *Scanner) scanToken() Token {
 	s.skipWhiteSpace()
+	s.lexeme = []rune{}
+	s.lexeme = append(s.lexeme, s.start)
 	s.start = s.current
 
 	if s.isAtEnd() {
@@ -173,6 +176,7 @@ func (s *Scanner) errorToken(err string) Token {
 func (s *Scanner) advance() rune {
 	s.at++
 	s.current = s.source[s.at]
+	s.lexeme = append(s.lexeme, s.current)
 	return s.source[s.at-1]
 }
 
@@ -225,7 +229,7 @@ func (s *Scanner) identifier() Token {
 }
 
 func (s *Scanner) identifierType() TokenType {
-	switch s.source[0] {
+	switch s.lexeme[0] {
 	case 'a':
 		return s.checkKeyword(1, 2, "nd", TOKEN_AND)
 	case 'c':
@@ -234,7 +238,7 @@ func (s *Scanner) identifierType() TokenType {
 		return s.checkKeyword(1, 3, "lse", TOKEN_ELSE)
 	case 'f':
 		{
-			switch s.source[1] {
+			switch s.lexeme[1] {
 			case 'a':
 				return s.checkKeyword(2, 3, "lse", TOKEN_FALSE)
 			case 'o':
@@ -257,7 +261,7 @@ func (s *Scanner) identifierType() TokenType {
 		return s.checkKeyword(1, 4, "uper", TOKEN_SUPER)
 	case 't':
 		{
-			switch s.source[1] {
+			switch s.lexeme[1] {
 			case 'h':
 				return s.checkKeyword(2, 2, "is", TOKEN_THIS)
 			case 'r':

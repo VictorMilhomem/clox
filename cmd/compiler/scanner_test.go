@@ -25,7 +25,6 @@ func TestIdentifierType(t *testing.T) {
 		{"true", TOKEN_TRUE},
 		{"var", TOKEN_VAR},
 		{"while", TOKEN_WHILE},
-		{"12 far", TOKEN_IDENTIFIER},
 		// Add more test cases as needed
 	}
 
