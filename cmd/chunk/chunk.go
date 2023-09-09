@@ -9,8 +9,9 @@ import (
 type Opcode byte
 
 const (
-	OpReturn Opcode = iota
-	OpConstant
+	OpConstant Opcode = iota
+	OpNegate
+	OpReturn
 )
 
 type Chunk struct {
@@ -84,10 +85,12 @@ func (c *Chunk) DisassembleInstruction(offset int) (int, error) {
 	instruction := c.code[offset]
 
 	switch instruction {
-	case byte(OpReturn):
-		return simpleInstruction("OP_RETURN", offset), nil
 	case byte(OpConstant):
 		return constantInstruction("OP_CONSTANT", c, offset), nil
+	case byte(OpNegate):
+		return simpleInstruction("OP_NEGATE", offset), nil
+	case byte(OpReturn):
+		return simpleInstruction("OP_RETURN", offset), nil
 	default:
 		return offset + 1, fmt.Errorf("unknown opcode %d", instruction)
 	}
