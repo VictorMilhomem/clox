@@ -60,31 +60,31 @@ func getRule(kind TokenType) ParseRule {
 		TOKEN_SEMICOLON:     {nil, nil, PREC_NONE},
 		TOKEN_SLASH:         {nil, binary, PREC_FACTOR},
 		TOKEN_STAR:          {nil, binary, PREC_FACTOR},
-		TOKEN_BANG:          {nil, nil, PREC_NONE},
-		TOKEN_BANG_EQUAL:    {nil, nil, PREC_NONE},
+		TOKEN_BANG:          {unary, nil, PREC_NONE},
+		TOKEN_BANG_EQUAL:    {nil, binary, PREC_NONE},
 		TOKEN_EQUAL:         {nil, nil, PREC_NONE},
-		TOKEN_EQUAL_EQUAL:   {nil, nil, PREC_NONE},
-		TOKEN_GREATER:       {nil, nil, PREC_NONE},
-		TOKEN_GREATER_EQUAL: {nil, nil, PREC_NONE},
-		TOKEN_LESS:          {nil, nil, PREC_NONE},
-		TOKEN_LESS_EQUAL:    {nil, nil, PREC_NONE},
+		TOKEN_EQUAL_EQUAL:   {nil, binary, PREC_NONE},
+		TOKEN_GREATER:       {nil, binary, PREC_NONE},
+		TOKEN_GREATER_EQUAL: {nil, binary, PREC_NONE},
+		TOKEN_LESS:          {nil, binary, PREC_NONE},
+		TOKEN_LESS_EQUAL:    {nil, binary, PREC_NONE},
 		TOKEN_IDENTIFIER:    {nil, nil, PREC_NONE},
 		TOKEN_STRING:        {nil, nil, PREC_NONE},
 		TOKEN_NUMBER:        {number, nil, PREC_NONE},
 		TOKEN_AND:           {nil, nil, PREC_NONE},
 		TOKEN_CLASS:         {nil, nil, PREC_NONE},
 		TOKEN_ELSE:          {nil, nil, PREC_NONE},
-		TOKEN_FALSE:         {nil, nil, PREC_NONE},
+		TOKEN_FALSE:         {literal, nil, PREC_NONE},
 		TOKEN_FOR:           {nil, nil, PREC_NONE},
 		TOKEN_FUN:           {nil, nil, PREC_NONE},
 		TOKEN_IF:            {nil, nil, PREC_NONE},
-		TOKEN_NIL:           {nil, nil, PREC_NONE},
+		TOKEN_NIL:           {literal, nil, PREC_NONE},
 		TOKEN_OR:            {nil, nil, PREC_NONE},
 		TOKEN_PRINT:         {nil, nil, PREC_NONE},
 		TOKEN_RETURN:        {nil, nil, PREC_NONE},
 		TOKEN_SUPER:         {nil, nil, PREC_NONE},
 		TOKEN_THIS:          {nil, nil, PREC_NONE},
-		TOKEN_TRUE:          {nil, nil, PREC_NONE},
+		TOKEN_TRUE:          {literal, nil, PREC_NONE},
 		TOKEN_VAR:           {nil, nil, PREC_NONE},
 		TOKEN_WHILE:         {nil, nil, PREC_NONE},
 		TOKEN_ERROR:         {nil, nil, PREC_NONE},
@@ -186,13 +186,24 @@ func makeConstant(value values.Value) byte {
 	return byte(constant)
 }
 
+func literal() {
+	switch p.previous.kind {
+	case TOKEN_FALSE:
+		emitByte(byte(chunk.OpFalse))
+	case TOKEN_TRUE:
+		emitByte(byte(chunk.OpTrue))
+	case TOKEN_NIL:
+		emitByte(byte(chunk.OpNil))
+	}
+}
+
 func number() {
 	value, err := strconv.ParseFloat(p.previous.start, 64)
 	if err != nil {
-		fmt.Errorf("error parsing float")
+		fmt.Print("error parsing float")
 		return
 	}
-	emitConstant(values.Value(value))
+	emitConstant(values.NewValue(values.VAL_NUMBER, value))
 }
 
 func grouping() {
@@ -206,6 +217,8 @@ func unary() {
 	parsePrecedence(PREC_UNARY)
 
 	switch operatorType {
+	case TOKEN_BANG:
+		emitByte(byte(chunk.OpNot))
 	case TOKEN_MINUS:
 		emitByte(byte(chunk.OpNegate))
 	default:
@@ -227,6 +240,18 @@ func binary() {
 		emitByte(byte(chunk.OpMultiply))
 	case TOKEN_SLASH:
 		emitByte(byte(chunk.OpDivide))
+	case TOKEN_BANG_EQUAL:
+		emitBytes(byte(chunk.OpEqual), byte(chunk.OpNot))
+	case TOKEN_EQUAL_EQUAL:
+		emitByte(byte(chunk.OpEqual))
+	case TOKEN_GREATER:
+		emitByte(byte(chunk.OpGreater))
+	case TOKEN_GREATER_EQUAL:
+		emitBytes(byte(chunk.OpLess), byte(chunk.OpNot))
+	case TOKEN_LESS:
+		emitByte(byte(chunk.OpLess))
+	case TOKEN_LESS_EQUAL:
+		emitBytes(byte(chunk.OpGreater), byte(chunk.OpNot))
 	default:
 		return
 	}

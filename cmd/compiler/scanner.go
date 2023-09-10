@@ -227,7 +227,7 @@ func (s *Scanner) identifier() Token {
 }
 
 func (s *Scanner) identifierType() TokenType {
-	switch s.lexeme[0] {
+	switch s.start {
 	case 'a':
 		return s.checkKeyword(1, 2, "nd", TOKEN_AND)
 	case 'c':
@@ -236,7 +236,7 @@ func (s *Scanner) identifierType() TokenType {
 		return s.checkKeyword(1, 3, "lse", TOKEN_ELSE)
 	case 'f':
 		{
-			switch s.lexeme[1] {
+			switch s.source[s.at] {
 			case 'a':
 				return s.checkKeyword(2, 3, "lse", TOKEN_FALSE)
 			case 'o':

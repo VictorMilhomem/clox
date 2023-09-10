@@ -10,10 +10,17 @@ type Opcode byte
 
 const (
 	OpConstant Opcode = iota
+	OpNil
+	OpTrue
+	OpFalse
+	OpEqual
+	OpGreater
+	OpLess
 	OpAdd
 	OpSub
 	OpMultiply
 	OpDivide
+	OpNot
 	OpNegate
 	OpReturn
 )
@@ -91,6 +98,18 @@ func (c *Chunk) DisassembleInstruction(offset int) (int, error) {
 	switch instruction {
 	case byte(OpConstant):
 		return constantInstruction("OP_CONSTANT", c, offset), nil
+	case byte(OpNil):
+		return simpleInstruction("OP_NIL", offset), nil
+	case byte(OpTrue):
+		return simpleInstruction("OP_TRUE", offset), nil
+	case byte(OpFalse):
+		return simpleInstruction("OP_FALSE", offset), nil
+	case byte(OpEqual):
+		return simpleInstruction("OP_EQUAL", offset), nil
+	case byte(OpGreater):
+		return simpleInstruction("OP_GREATER", offset), nil
+	case byte(OpLess):
+		return simpleInstruction("OP_LESS", offset), nil
 	case byte(OpAdd):
 		return simpleInstruction("OP_ADD", offset), nil
 	case byte(OpSub):
@@ -101,6 +120,8 @@ func (c *Chunk) DisassembleInstruction(offset int) (int, error) {
 		return simpleInstruction("OP_DIVIDE", offset), nil
 	case byte(OpNegate):
 		return simpleInstruction("OP_NEGATE", offset), nil
+	case byte(OpNot):
+		return simpleInstruction("OP_NOT", offset), nil
 	case byte(OpReturn):
 		return simpleInstruction("OP_RETURN", offset), nil
 	default:
