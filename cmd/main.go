@@ -33,9 +33,9 @@ func repl(vm *vm.VM) {
 		log.Panic("failed to readline")
 	}
 	defer rl.Close()
-	source := strings.Builder{}
 
 	for {
+		source := strings.Builder{}
 		line, err := rl.Readline()
 		if err != nil {
 			log.Println("failed to readline")
