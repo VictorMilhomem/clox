@@ -3,7 +3,8 @@ package compiler
 import (
 	"fmt"
 	"math"
-	"strconv"
+
+	"github.com/antlr4-go/antlr/v4"
 
 	"github.com/VictorMilhomem/golox/cmd/chunk"
 	"github.com/VictorMilhomem/golox/cmd/values"
@@ -12,11 +13,11 @@ import (
 const UINT8_MAX = math.MaxUint8
 
 type Parser struct {
-	current   Token
-	previous  Token
+	current   antlr.Token
+	previous  antlr.Token
 	hadError  bool
 	panicMode bool
-	scanner   *Scanner
+	scanner   *Lexer
 }
 
 func NewParser() *Parser {
@@ -47,8 +48,8 @@ type ParseRule struct {
 	precedence Precedence
 }
 
-func getRule(kind TokenType) ParseRule {
-	rules := map[TokenType]ParseRule{
+func getRule(kind int) ParseRule {
+	rules := map[int]ParseRule{
 		TOKEN_LEFT_PAREN:    {grouping, nil, PREC_NONE},
 		TOKEN_RIGHT_PAREN:   {nil, nil, PREC_NONE},
 		TOKEN_LEFT_BRACE:    {nil, nil, PREC_NONE},
@@ -106,11 +107,11 @@ func advance() {
 	p.previous = p.current
 
 	for {
-		p.current = p.scanner.scanToken()
-		if p.current.kind != TOKEN_ERROR {
+		p.current = p.scanner.NextToken()
+		if p.current.GetTokenType() != TOKEN_ERROR {
 			break
 		}
-		errorAtCurrent(string(p.current.start))
+		errorAtCurrent(p.current.String())
 	}
 }
 
@@ -122,27 +123,27 @@ func err(message string) {
 	errorAt(p.previous, message)
 }
 
-func errorAt(token Token, message string) {
+func errorAt(token antlr.Token, message string) {
 	if p.panicMode {
 		return
 	}
 	p.panicMode = true
-	fmt.Printf("[line %d] error", token.line)
+	fmt.Printf("[line %d] error", token.GetLine())
 
-	if token.kind == TOKEN_EOF {
-		fmt.Printf("[line %d] error", token.line)
-	} else if token.kind == TOKEN_ERROR {
+	if token.GetTokenType() == TOKEN_EOF {
+		fmt.Printf("[line %d] error", token.GetLine())
+	} else if token.GetTokenType() == TOKEN_ERROR {
 		// nothing
 	} else {
-		fmt.Printf(" at '%.*s'", token.length, token.start)
+		fmt.Printf(" at '%s' %d", token.String(), token.GetStart())
 	}
 
 	fmt.Printf(": %s\n", message)
 	p.hadError = true
 }
 
-func consume(kind TokenType, message string) {
-	if p.current.kind == kind {
+func consume(kind int, message string) {
+	if p.current.GetTokenType() == kind {
 		advance()
 		return
 	}
@@ -151,7 +152,7 @@ func consume(kind TokenType, message string) {
 }
 
 func emitByte(_byte byte) {
-	currentChunk().WriteChunk(_byte, p.previous.line)
+	currentChunk().WriteChunk(_byte, p.previous.GetLine())
 }
 
 func emitBytes(byte1, byte2 byte) {
@@ -187,7 +188,7 @@ func makeConstant(value values.Value) byte {
 }
 
 func literal() {
-	switch p.previous.kind {
+	switch p.previous.GetTokenType() {
 	case TOKEN_FALSE:
 		emitByte(byte(chunk.OpFalse))
 	case TOKEN_TRUE:
@@ -198,11 +199,7 @@ func literal() {
 }
 
 func number() {
-	value, err := strconv.ParseFloat(p.previous.start, 64)
-	if err != nil {
-		fmt.Print("error parsing float")
-		return
-	}
+	value := float64(p.previous.GetStart())
 	emitConstant(values.NewValue(values.VAL_NUMBER, value))
 }
 
@@ -212,7 +209,7 @@ func grouping() {
 }
 
 func unary() {
-	operatorType := p.previous.kind
+	operatorType := p.previous.GetTokenType()
 
 	parsePrecedence(PREC_UNARY)
 
@@ -227,7 +224,7 @@ func unary() {
 }
 
 func binary() {
-	operatorType := p.previous.kind
+	operatorType := p.previous.GetTokenType()
 	rule := getRule(operatorType)
 	parsePrecedence(rule.precedence + 1)
 
@@ -259,16 +256,16 @@ func binary() {
 
 func parsePrecedence(precedence Precedence) {
 	advance()
-	prefixRule := getRule(p.previous.kind).prefix
+	prefixRule := getRule(p.previous.GetTokenType()).prefix
 	if prefixRule == nil {
 		err("expected expression")
 		return
 	}
 	prefixRule()
 
-	for precedence <= getRule(p.current.kind).precedence {
+	for precedence <= getRule(p.current.GetTokenType()).precedence {
 		advance()
-		infixRule := getRule(p.previous.kind).infix
+		infixRule := getRule(p.previous.GetTokenType()).infix
 		infixRule()
 	}
 }
@@ -277,15 +274,16 @@ func expression() {
 	parsePrecedence(PREC_ASSIGNMENT)
 }
 
-func Compile(source string, chunk *chunk.Chunk) bool {
-	scanner := NewScanner([]rune(source))
+func Compile(source *antlr.InputStream, chunk *chunk.Chunk) bool {
+	scanner := NewLexer(antlr.CharStream(source))
 	p.scanner = scanner
 	compilingChunk = chunk
 	p.hadError = false
 	p.panicMode = false
 	advance()
 	expression()
-	consume(TOKEN_EOF, "Expect end of expression.")
+
+	consume(p.scanner.EmitEOF().GetTokenType(), "Expect end of expression.")
 	endCompiler()
 	return !p.hadError
 }

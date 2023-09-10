@@ -7,6 +7,7 @@ import (
 	"github.com/VictorMilhomem/golox/cmd/chunk"
 	"github.com/VictorMilhomem/golox/cmd/compiler"
 	"github.com/VictorMilhomem/golox/cmd/values"
+	"github.com/antlr4-go/antlr/v4"
 	"github.com/golang-collections/collections/stack"
 )
 
@@ -51,10 +52,9 @@ func (vm *VM) resetStack() {
 }
 
 func (vm *VM) Interpret(source string) InterpretResult {
-	source = source + "\x00"
-
+	is := antlr.NewInputStream(source)
 	ck := chunk.NewChunk()
-	if !compiler.Compile(source, ck) {
+	if !compiler.Compile(is, ck) {
 		ck.FreeChunk()
 		return InterpretCompileError
 	}
