@@ -82,7 +82,7 @@ func (vm *VM) run() InterpretResult {
 				vm.stack.Push(constant)
 			}
 		case byte(chunk.OpNil):
-			vm.stack.Push(values.NewValue(values.VAL_NIL, 0))
+			vm.stack.Push(values.NewValue(values.VAL_NIL, nil))
 		case byte(chunk.OpTrue):
 			vm.stack.Push(values.NewValue(values.VAL_BOOL, true))
 		case byte(chunk.OpFalse):

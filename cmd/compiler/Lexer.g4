@@ -1,5 +1,8 @@
 lexer grammar Lexer;
 
+// Ignorar espaços em branco (whitespace)
+WS : [ \t\r\n]+ -> skip ;
+
 // Tokens
 TOKEN_LEFT_PAREN : '(' ;
 TOKEN_RIGHT_PAREN : ')' ;
@@ -20,9 +23,6 @@ TOKEN_GREATER : '>' ;
 TOKEN_GREATER_EQUAL : '>=' ;
 TOKEN_LESS : '<' ;
 TOKEN_LESS_EQUAL : '<=' ;
-TOKEN_IDENTIFIER : [a-zA-Z_][a-zA-Z_0-9]* ;
-TOKEN_STRING : '"' (~["])* '"' ;
-TOKEN_NUMBER : DIGIT+ ('.' DIGIT+)? ;
 TOKEN_AND : 'and' ;
 TOKEN_CLASS : 'class' ;
 TOKEN_ELSE : 'else' ;
@@ -39,9 +39,17 @@ TOKEN_THIS : 'this' ;
 TOKEN_TRUE : 'true' ;
 TOKEN_VAR : 'var' ;
 TOKEN_WHILE : 'while' ;
-TOKEN_ERROR : .; // Ignorar caracteres desconhecidos
+
+// Tokens para strings e identificadores
+TOKEN_STRING : '"' (~["])* '"' ;
+TOKEN_NUMBER : DIGIT+ ('.' DIGIT+)? ;
+TOKEN_IDENTIFIER : [a-zA-Z_][a-zA-Z_0-9]* ;
+
+// Token EOF
 TOKEN_EOF : EOF ;
+
+// Token para caracteres desconhecidos (ERROR)
+TOKEN_ERROR : . -> skip ;
 
 // Defina fragmentos
 fragment DIGIT : [0-9] ;
-

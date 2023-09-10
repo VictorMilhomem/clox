@@ -262,6 +262,7 @@ func binary() {
 func parsePrecedence(precedence Precedence) {
 	advance()
 	prefixRule := getRule(p.previous.GetTokenType()).prefix
+	fmt.Print(p.previous.GetText())
 	if prefixRule == nil {
 		err("expected expression")
 		return
