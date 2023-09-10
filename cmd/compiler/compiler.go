@@ -110,7 +110,7 @@ func advance() {
 		if p.current.kind != TOKEN_ERROR {
 			break
 		}
-		errorAtCurrent(p.current.start)
+		errorAtCurrent(string(p.current.start))
 	}
 }
 
@@ -134,7 +134,7 @@ func errorAt(token Token, message string) {
 	} else if token.kind == TOKEN_ERROR {
 		// nothing
 	} else {
-		fmt.Printf(" at '%s'", string(token.start[:token.length]))
+		fmt.Printf(" at '%.*s'", token.length, token.start)
 	}
 
 	fmt.Printf(": %s\n", message)
