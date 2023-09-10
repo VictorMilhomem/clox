@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/VictorMilhomem/golox/cmd/chunk"
+	"github.com/VictorMilhomem/golox/cmd/compiler"
 	"github.com/VictorMilhomem/golox/cmd/values"
 	"github.com/golang-collections/collections/stack"
 )
@@ -48,8 +49,21 @@ func (vm *VM) resetStack() {
 	vm.stack = stack.New()
 }
 
-func (vm *VM) Interpret(source string) (InterpretResult, error) {
-	return vm.run(), nil
+func (vm *VM) Interpret(source string) InterpretResult {
+	source = source + "\x00"
+
+	ck := chunk.NewChunk()
+	if !compiler.Compile(source, ck) {
+		ck.FreeChunk()
+		return InterpretCompileError
+	}
+
+	vm.chunk = ck
+	vm.ip = vm.chunk.GetCode()[0]
+	result := vm.run()
+
+	ck.FreeChunk()
+	return result
 }
 
 func (vm *VM) run() InterpretResult {
