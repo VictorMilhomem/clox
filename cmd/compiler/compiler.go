@@ -3,6 +3,7 @@ package compiler
 import (
 	"fmt"
 	"math"
+	"strconv"
 
 	"github.com/antlr4-go/antlr/v4"
 
@@ -111,7 +112,7 @@ func advance() {
 		if p.current.GetTokenType() != TOKEN_ERROR {
 			break
 		}
-		errorAtCurrent(p.current.String())
+		errorAtCurrent(p.current.GetText())
 	}
 }
 
@@ -135,7 +136,7 @@ func errorAt(token antlr.Token, message string) {
 	} else if token.GetTokenType() == TOKEN_ERROR {
 		// nothing
 	} else {
-		fmt.Printf(" at '%s' %d", token.String(), token.GetStart())
+		fmt.Printf(" at '%s' %d", token.GetText(), token.GetStart())
 	}
 
 	fmt.Printf(": %s\n", message)
@@ -199,7 +200,11 @@ func literal() {
 }
 
 func number() {
-	value := float64(p.previous.GetStart())
+	value, err := strconv.ParseFloat(p.previous.GetText(), 64)
+	if err != nil {
+		fmt.Printf("error parsing float: %s", p.previous.GetText())
+		return
+	}
 	emitConstant(values.NewValue(values.VAL_NUMBER, value))
 }
 
