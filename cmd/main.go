@@ -30,7 +30,7 @@ func emitLine(line string, builder strings.Builder) strings.Builder {
 func repl(vm *vm.VM) {
 	rl, err := readline.New("glox > ")
 	if err != nil {
-		log.Panic("failed to readline")
+		log.Panic("failed to init repl")
 	}
 	defer rl.Close()
 
@@ -38,8 +38,9 @@ func repl(vm *vm.VM) {
 		source := strings.Builder{}
 		line, err := rl.Readline()
 		if err != nil {
-			log.Println("failed to readline")
-			continue
+			log.Println("golox repl terminated")
+			rl.Close()
+			os.Exit(1)
 		}
 		source = emitLine(line, source)
 		vm.Interpret(source.String())

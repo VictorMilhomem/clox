@@ -196,9 +196,7 @@ func (s *Scanner) skipWhiteSpace() {
 	for {
 		char := s.peek()
 		switch char {
-		case ' ':
-		case '\r':
-		case '\t':
+		case ' ', '\r', '\t':
 			s.advance()
 		case '\n':
 			s.line++
