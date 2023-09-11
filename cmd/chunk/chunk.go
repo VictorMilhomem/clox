@@ -66,66 +66,60 @@ func (c *Chunk) FreeChunk() error {
 
 func (c *Chunk) AddConstant(value values.Value) int {
 	c.constants.WriteValueArray(value)
-	return len(c.constants.GetValues()) - 1
+	return len(c.constants.Values) - 1
 }
 
 func (c *Chunk) DisassembleChunk(name string) error {
 	fmt.Printf("== %s ==\n", name)
 	offset := 0
-	var err error
 	for offset < len(c.code) {
-		offset, err = c.DisassembleInstruction(offset)
-		if err != nil {
-			return fmt.Errorf("error disassembling instruction %v", err)
-		}
-
+		offset = c.DisassembleInstruction(offset)
 	}
 	return nil
 }
 
-func (c *Chunk) DisassembleInstruction(offset int) (int, error) {
+func (c *Chunk) DisassembleInstruction(offset int) int {
 	fmt.Printf("%04d ", offset)
 
-	line, ok := c.lines[offset]
-	if !ok {
-		fmt.Printf("    | ")
+	if offset > 0 && c.lines[offset] == c.lines[offset-1] {
+		fmt.Printf("   | ")
 	} else {
-		fmt.Printf("%4d ", line)
+		fmt.Printf("%4d ", c.lines[offset])
 	}
 
 	instruction := c.code[offset]
 
 	switch instruction {
 	case byte(OpConstant):
-		return constantInstruction("OP_CONSTANT", c, offset), nil
+		return constantInstruction("OP_CONSTANT", c, offset)
 	case byte(OpNil):
-		return simpleInstruction("OP_NIL", offset), nil
+		return simpleInstruction("OP_NIL", offset)
 	case byte(OpTrue):
-		return simpleInstruction("OP_TRUE", offset), nil
+		return simpleInstruction("OP_TRUE", offset)
 	case byte(OpFalse):
-		return simpleInstruction("OP_FALSE", offset), nil
+		return simpleInstruction("OP_FALSE", offset)
 	case byte(OpEqual):
-		return simpleInstruction("OP_EQUAL", offset), nil
+		return simpleInstruction("OP_EQUAL", offset)
 	case byte(OpGreater):
-		return simpleInstruction("OP_GREATER", offset), nil
+		return simpleInstruction("OP_GREATER", offset)
 	case byte(OpLess):
-		return simpleInstruction("OP_LESS", offset), nil
+		return simpleInstruction("OP_LESS", offset)
 	case byte(OpAdd):
-		return simpleInstruction("OP_ADD", offset), nil
+		return simpleInstruction("OP_ADD", offset)
 	case byte(OpSub):
-		return simpleInstruction("OP_SUB", offset), nil
+		return simpleInstruction("OP_SUB", offset)
 	case byte(OpMultiply):
-		return simpleInstruction("OP_MULTIPLY", offset), nil
+		return simpleInstruction("OP_MULTIPLY", offset)
 	case byte(OpDivide):
-		return simpleInstruction("OP_DIVIDE", offset), nil
+		return simpleInstruction("OP_DIVIDE", offset)
 	case byte(OpNegate):
-		return simpleInstruction("OP_NEGATE", offset), nil
+		return simpleInstruction("OP_NEGATE", offset)
 	case byte(OpNot):
-		return simpleInstruction("OP_NOT", offset), nil
+		return simpleInstruction("OP_NOT", offset)
 	case byte(OpReturn):
-		return simpleInstruction("OP_RETURN", offset), nil
+		return simpleInstruction("OP_RETURN", offset)
 	default:
-		return offset + 1, fmt.Errorf("unknown opcode %d", instruction)
+		return offset + 1
 	}
 }
 
@@ -137,7 +131,7 @@ func simpleInstruction(name string, offset int) int {
 func constantInstruction(name string, chunk *Chunk, offset int) int {
 	constant := chunk.code[offset+1]
 	fmt.Printf("%-16s %4d '", name, constant)
-	values.PrintValue(chunk.constants.GetValues()[constant])
+	chunk.constants.Values[constant].PrintValue()
 	fmt.Println("'")
 	return offset + 2
 }

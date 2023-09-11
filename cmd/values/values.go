@@ -10,106 +10,111 @@ const (
 	VAL_NUMBER
 )
 
-type Value struct {
-	kind ValueType
-	as   interface{}
+type Value interface { // N.B. go doesn't have sum-types, so we use an interface; this is more verbose
+	Type() ValueType
+	AsBoolean() bool
+	AsNumber() float64
+	PrintValue()
 }
 
-func NewValue(kind ValueType, as interface{}) Value {
-	return Value{
-		kind: kind,
-		as:   as,
-	}
+func IsNumber(v Value) bool {
+	return v.Type() == VAL_NUMBER
 }
 
-func AsBool(value Value) bool {
-	if value.kind != VAL_BOOL {
-		panic("Valor não é do tipo VAL_BOOL")
-	}
-	return value.as.(bool)
+func IsBool(v Value) bool {
+	return v.Type() == VAL_BOOL
 }
 
-func AsNil(value Value) interface{} {
-	if value.kind != VAL_NIL {
-		panic("Valor não é do tipo VAL_BOOL")
-	}
-	return nil
+func IsNil(v Value) bool {
+	return v.Type() == VAL_NIL
 }
 
-// AsNumber obtém o valor numérico subjacente de um Value
-func AsNumber(value Value) float64 {
-	if value.kind != VAL_NUMBER {
-		panic("Valor não é do tipo VAL_NUMBER")
-	}
-	return value.as.(float64)
+type NilVal struct{}
+
+func (nv NilVal) Type() ValueType {
+	return VAL_NIL
 }
 
-func IsBool(value Value) bool {
-	return value.kind == VAL_BOOL
+func (nv NilVal) AsBoolean() bool {
+	panic("nil value is not a boolean!")
 }
 
-func IsNil(value Value) bool {
-	return value.kind == VAL_NIL
+func (nv NilVal) AsNumber() float64 {
+	panic("nil value is not a number!")
 }
 
-func IsNumber(value Value) bool {
-	return value.kind == VAL_NUMBER
+func (nv NilVal) PrintValue() {
+	fmt.Print("nil")
+}
+
+type BoolVal bool
+
+func (bv BoolVal) Type() ValueType {
+	return VAL_BOOL
+}
+
+func (bv BoolVal) AsBoolean() bool {
+	return bool(bv)
+}
+
+func (bv BoolVal) AsNumber() float64 {
+	panic("bool value is not a number!")
+}
+
+func (bv BoolVal) PrintValue() {
+	fmt.Printf("%t", bool(bv))
+}
+
+type NumberVal float64
+
+func (nv NumberVal) Type() ValueType {
+	return VAL_NUMBER
+}
+
+func (nv NumberVal) AsBoolean() bool {
+	panic("number value is not a boolean!")
+}
+
+func (nv NumberVal) AsNumber() float64 {
+	return float64(nv)
+}
+
+func (nv NumberVal) PrintValue() {
+	fmt.Printf("%g", float64(nv))
 }
 
 type ValueArray struct {
-	values []Value
+	Values []Value
 }
 
 func NewValueArray() *ValueArray {
-	return &ValueArray{
-		values: []Value{},
-	}
+	return &ValueArray{}
 }
 
-func (v *ValueArray) WriteValueArray(value Value) error {
-	v.values = append(v.values, value)
+func (a ValueArray) Count() int {
+	return len(a.Values)
+}
+
+func (a *ValueArray) WriteValueArray(v Value) error {
+	a.Values = append(a.Values, v)
 	return nil
 }
 
-func (v *ValueArray) FreeValueArray() error {
-	v.values = []Value{}
-	return nil
-}
-
-func (v *ValueArray) GetValues() []Value {
-	return v.values
-}
-
-func PrintValue(value Value) {
-	switch value.kind {
-	case VAL_BOOL:
-		{
-			switch AsBool(value) {
-			case true:
-				fmt.Printf("true")
-			case false:
-				fmt.Printf("false")
-			}
-		}
-
-	case VAL_NIL:
-		fmt.Printf("%v", AsNil(value))
-	case VAL_NUMBER:
-		fmt.Printf("%g", AsNumber(value))
-	}
+func (a *ValueArray) FreeValueArray() {
+	a.Values = []Value{}
 }
 
 func ValuesEqual(a Value, b Value) bool {
-	if a.kind != b.kind {
+	if a.Type() != b.Type() {
 		return false
 	}
-	switch a.kind {
+	switch a.Type() {
 	case VAL_BOOL:
-		return AsBool(a) == AsBool(b)
+		return a.AsBoolean() == b.AsBoolean()
 	case VAL_NIL:
 		return true
 	case VAL_NUMBER:
-		return AsNumber(a) == AsNumber(b)
+		return a.AsNumber() == b.AsNumber()
 	default:
 		return false
 	}

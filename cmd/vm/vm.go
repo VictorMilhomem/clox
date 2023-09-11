@@ -13,8 +13,6 @@ import (
 
 type InterpretResult int
 
-const STACKMAX int = 256
-
 const (
 	IntepretOk InterpretResult = iota
 	InterpretCompileError
@@ -22,29 +20,27 @@ const (
 )
 
 type VM struct {
-	chunk *chunk.Chunk
+	chunk chunk.Chunk
 	ip    byte
 	stack *stack.Stack
 }
 
 func NewVm() *VM {
 	return &VM{
-		chunk: chunk.NewChunk(),
+		chunk: chunk.Chunk{},
 		ip:    0,
 		stack: stack.New(),
 	}
 }
 
-func (vm *VM) InitVM() error {
+func (vm *VM) InitVM() {
 	vm.resetStack()
-	return nil
 }
 
-func (vm *VM) FreeVM() error {
-	vm.chunk = chunk.NewChunk()
+func (vm *VM) FreeVM() {
+	vm.chunk = chunk.Chunk{}
 	vm.ip = 0
 	vm.resetStack()
-	return nil
 }
 
 func (vm *VM) resetStack() {
@@ -59,8 +55,8 @@ func (vm *VM) Interpret(source string) InterpretResult {
 		return InterpretCompileError
 	}
 
-	vm.chunk = ck
-	vm.ip = vm.chunk.GetCode()[0]
+	vm.chunk = *ck
+	vm.ip = 0
 	result := vm.run()
 
 	ck.FreeChunk()
@@ -75,55 +71,55 @@ func (vm *VM) run() InterpretResult {
 		}
 		instruction := vm.readByte()
 
-		switch instruction {
-		case byte(chunk.OpConstant):
+		switch chunk.Opcode(instruction) {
+		case chunk.OpConstant:
 			{
 				constant := vm.readConstant()
 				vm.stack.Push(constant)
 			}
-		case byte(chunk.OpNil):
-			vm.stack.Push(values.NewValue(values.VAL_NIL, nil))
-		case byte(chunk.OpTrue):
-			vm.stack.Push(values.NewValue(values.VAL_BOOL, true))
-		case byte(chunk.OpFalse):
-			vm.stack.Push(values.NewValue(values.VAL_BOOL, false))
+		case chunk.OpNil:
+			vm.stack.Push(values.NilVal(struct{}{}))
+		case chunk.OpTrue:
+			vm.stack.Push(values.BoolVal(true))
+		case chunk.OpFalse:
+			vm.stack.Push(values.BoolVal(false))
 
-		case byte(chunk.OpEqual):
+		case chunk.OpEqual:
 			{
 				b := vm.stack.Pop().(values.Value)
 				a := vm.stack.Pop().(values.Value)
-				vm.stack.Push(values.NewValue(values.VAL_BOOL, values.ValuesEqual(a, b)))
+				vm.stack.Push(values.BoolVal(values.ValuesEqual(a, b)))
 			}
-		case byte(chunk.OpGreater):
+		case chunk.OpGreater:
 			vm.binaryOp(">")
-		case byte(chunk.OpLess):
+		case chunk.OpLess:
 			vm.binaryOp("<")
-		case byte(chunk.OpNot):
+		case chunk.OpNot:
 			{
-				val := values.NewValue(values.VAL_BOOL, vm.isFalsey(vm.stack.Pop().(values.Value)))
+				val := values.BoolVal(vm.isFalsey(vm.stack.Pop().(values.Value)))
 				vm.stack.Push(val)
 			}
-		case byte(chunk.OpAdd):
+		case chunk.OpAdd:
 			vm.binaryOp("+")
-		case byte(chunk.OpSub):
+		case chunk.OpSub:
 			vm.binaryOp("-")
-		case byte(chunk.OpMultiply):
+		case chunk.OpMultiply:
 			vm.binaryOp("*")
-		case byte(chunk.OpDivide):
+		case chunk.OpDivide:
 			vm.binaryOp("/")
-		case byte(chunk.OpNegate):
+		case chunk.OpNegate:
 			{
 				if !values.IsNumber(vm.stack.Peek().(values.Value)) {
 					vm.runtimeError("operand must be a number")
 				}
 
-				value := values.AsNumber(vm.stack.Pop().(values.Value))
-				vm.stack.Push(values.NewValue(values.VAL_NUMBER, -value))
+				value := vm.stack.Pop().(values.Value).AsNumber()
+				vm.stack.Push(values.NumberVal(-value))
 			}
 
-		case byte(chunk.OpReturn):
+		case chunk.OpReturn:
 			value, _ := vm.stack.Pop().(values.Value)
-			values.PrintValue(value)
+			value.PrintValue()
 			fmt.Println()
 			return IntepretOk
 		}
@@ -146,41 +142,37 @@ func (vm *VM) binaryOp(op string) {
 	if !values.IsNumber(vm.stack.Peek().(values.Value)) {
 		vm.runtimeError("operands must be numbers")
 	} else {
-		b := values.AsNumber(vm.stack.Pop().(values.Value))
+		b := vm.stack.Pop().(values.Value).AsNumber()
 		if values.IsNumber(vm.stack.Peek().(values.Value)) {
-			a := values.AsNumber(vm.stack.Pop().(values.Value))
+			a := vm.stack.Pop().(values.Value).AsNumber()
 			switch op {
 			case "+":
-				vm.stack.Push(values.NewValue(values.VAL_NUMBER, a+b))
+				vm.stack.Push(values.NumberVal(a + b))
 			case "-":
-				vm.stack.Push(values.NewValue(values.VAL_NUMBER, a-b))
+				vm.stack.Push(values.NumberVal(a - b))
 			case "*":
-				vm.stack.Push(values.NewValue(values.VAL_NUMBER, a*b))
+				vm.stack.Push(values.NumberVal(a * b))
 			case "/":
-				vm.stack.Push(values.NewValue(values.VAL_NUMBER, a/b))
+				vm.stack.Push(values.NumberVal(a / b))
 			case ">":
-				vm.stack.Push(values.NewValue(values.VAL_BOOL, a > b))
+				vm.stack.Push(values.BoolVal(a > b))
 			case "<":
-				vm.stack.Push(values.NewValue(values.VAL_BOOL, a < b))
+				vm.stack.Push(values.BoolVal(a < b))
 			}
 		}
 	}
 }
 
 func (vm *VM) isFalsey(value values.Value) bool {
-	return values.IsNil(value) || (values.IsBool(value) && !values.AsBool(value))
+	return values.IsNil(value) || (values.IsBool(value) && !value.AsBoolean())
 }
 
 func (vm *VM) readByte() byte {
-	if vm.ip >= byte(len(vm.chunk.GetCode())) {
-		return 0
-	}
-
 	byteToRead := vm.chunk.GetCode()[vm.ip]
 	vm.ip++
 	return byteToRead
 }
 
 func (vm *VM) readConstant() values.Value {
-	return vm.chunk.GetConstants().GetValues()[vm.readByte()]
+	return vm.chunk.GetConstants().Values[vm.readByte()]
 }

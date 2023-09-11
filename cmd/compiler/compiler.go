@@ -171,7 +171,7 @@ func emitConstant(value values.Value) {
 
 func endCompiler() {
 	emitReturn()
-	debug := true
+	debug := false
 	if debug {
 		if !p.hadError {
 			compilingChunk.DisassembleChunk("code")
@@ -192,10 +192,10 @@ func literal() {
 	switch p.previous.GetTokenType() {
 	case TOKEN_FALSE:
 		emitByte(byte(chunk.OpFalse))
-	case TOKEN_TRUE:
-		emitByte(byte(chunk.OpTrue))
 	case TOKEN_NIL:
 		emitByte(byte(chunk.OpNil))
+	case TOKEN_TRUE:
+		emitByte(byte(chunk.OpTrue))
 	}
 }
 
@@ -205,7 +205,7 @@ func number() {
 		fmt.Printf("error parsing float: %s", p.previous.GetText())
 		return
 	}
-	emitConstant(values.NewValue(values.VAL_NUMBER, value))
+	emitConstant(values.NumberVal(value))
 }
 
 func grouping() {
@@ -262,7 +262,7 @@ func binary() {
 func parsePrecedence(precedence Precedence) {
 	advance()
 	prefixRule := getRule(p.previous.GetTokenType()).prefix
-	fmt.Print(p.previous.GetText())
+
 	if prefixRule == nil {
 		err("expected expression")
 		return
