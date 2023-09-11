@@ -57,6 +57,10 @@ func (nv NilVal) AsNumber() float64 {
 	panic("nil value is not a number!")
 }
 
+func (nv NilVal) AsObj() Obj {
+	panic("number value is not a boolean!")
+}
+
 func (nv NilVal) PrintValue() {
 	fmt.Print("nil")
 }
