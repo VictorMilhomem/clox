@@ -2,18 +2,25 @@ package values
 
 import "fmt"
 
-type ValueType int
+type (
+	NilVal    struct{}
+	BoolVal   bool
+	NumberVal float64
+	ValueType int
+)
 
 const (
 	VAL_BOOL ValueType = iota
 	VAL_NIL
 	VAL_NUMBER
+	VAL_OBJ
 )
 
-type Value interface { // N.B. go doesn't have sum-types, so we use an interface; this is more verbose
+type Value interface {
 	Type() ValueType
 	AsBoolean() bool
 	AsNumber() float64
+	AsObj() Obj
 	PrintValue()
 }
 
@@ -29,8 +36,15 @@ func IsNil(v Value) bool {
 	return v.Type() == VAL_NIL
 }
 
-type NilVal struct{}
+func IsObj(v Value) bool {
+	return v.Type() == VAL_OBJ
+}
 
+func IsString(v Value) bool {
+	return v.AsObj().kind == OBJ_STRING
+}
+
+/*================NIL VAL======================*/
 func (nv NilVal) Type() ValueType {
 	return VAL_NIL
 }
@@ -47,7 +61,7 @@ func (nv NilVal) PrintValue() {
 	fmt.Print("nil")
 }
 
-type BoolVal bool
+/*================BOOL VAL======================*/
 
 func (bv BoolVal) Type() ValueType {
 	return VAL_BOOL
@@ -61,11 +75,15 @@ func (bv BoolVal) AsNumber() float64 {
 	panic("bool value is not a number!")
 }
 
+func (bv BoolVal) AsObj() Obj {
+	panic("bool value is not a obj!")
+}
+
 func (bv BoolVal) PrintValue() {
 	fmt.Printf("%t", bool(bv))
 }
 
-type NumberVal float64
+/*================NUMBER VAL======================*/
 
 func (nv NumberVal) Type() ValueType {
 	return VAL_NUMBER
@@ -79,9 +97,42 @@ func (nv NumberVal) AsNumber() float64 {
 	return float64(nv)
 }
 
+func (nv NumberVal) AsObj() Obj {
+	panic("number value is not a boolean!")
+}
+
 func (nv NumberVal) PrintValue() {
 	fmt.Printf("%g", float64(nv))
 }
+
+/*================OBJ VAL======================*/
+func (obj Obj) Type() ValueType {
+	return VAL_OBJ
+}
+
+func (obj Obj) AsBoolean() bool {
+	panic("object value is not a boolean!")
+}
+
+func (obj Obj) AsNumber() float64 {
+	panic("object value is not a number!")
+}
+
+func (obj Obj) AsObj() Obj {
+	return obj
+}
+
+func (obj Obj) PrinValue() {
+	fmt.Printf("%v", obj)
+}
+
+func (obj Obj) AsString() ObjString {
+	return ObjString{
+		obj: obj,
+	}
+}
+
+/*================VALUE ARRAY======================*/
 
 type ValueArray struct {
 	Values []Value
