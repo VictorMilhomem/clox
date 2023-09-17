@@ -7,11 +7,19 @@ const (
 )
 
 type Obj struct {
-	kind ObjType
+	Kind ObjType
 }
 
 type ObjString struct {
-	obj    Obj
-	length int
-	chars  []rune
+	Obj    Obj
+	Length int
+	Chars  string
+}
+
+func CopyString(chars string) *ObjString {
+	return &ObjString{
+		Obj:    Obj{OBJ_STRING},
+		Length: len(chars),
+		Chars:  chars,
+	}
 }

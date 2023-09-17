@@ -71,7 +71,7 @@ func getRule(kind int) ParseRule {
 		TOKEN_LESS:          {nil, binary, PREC_COMPARISON},
 		TOKEN_LESS_EQUAL:    {nil, binary, PREC_COMPARISON},
 		TOKEN_IDENTIFIER:    {nil, nil, PREC_NONE},
-		TOKEN_STRING:        {nil, nil, PREC_NONE},
+		TOKEN_STRING:        {strings, nil, PREC_NONE},
 		TOKEN_NUMBER:        {number, nil, PREC_NONE},
 		TOKEN_AND:           {nil, nil, PREC_NONE},
 		TOKEN_CLASS:         {nil, nil, PREC_NONE},
@@ -186,6 +186,11 @@ func makeConstant(value values.Value) byte {
 		return 0
 	}
 	return byte(constant)
+}
+
+func strings() {
+	str := values.CopyString(p.previous.GetText())
+	emitConstant(values.Obj(str.Obj))
 }
 
 func literal() {

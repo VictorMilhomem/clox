@@ -3,6 +3,7 @@ package vm
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/VictorMilhomem/golox/cmd/chunk"
 	"github.com/VictorMilhomem/golox/cmd/compiler"
@@ -139,11 +140,12 @@ func (vm *VM) runtimeError(format string, args ...interface{}) {
 }
 
 func (vm *VM) binaryOp(op string) {
-	if !values.IsNumber(vm.stack.Peek().(values.Value)) {
-		vm.runtimeError("operands must be numbers")
-	} else {
-		b := vm.stack.Pop().(values.Value).AsNumber()
-		if values.IsNumber(vm.stack.Peek().(values.Value)) {
+	b := vm.stack.Pop().(values.Value)
+	switch b.Type() {
+	case values.VAL_NUMBER:
+		switch vm.stack.Peek().(values.Value).Type() {
+		case values.VAL_NUMBER:
+			b := b.AsNumber()
 			a := vm.stack.Pop().(values.Value).AsNumber()
 			switch op {
 			case "+":
@@ -159,7 +161,32 @@ func (vm *VM) binaryOp(op string) {
 			case "<":
 				vm.stack.Push(values.BoolVal(a < b))
 			}
+
+		case values.VAL_OBJ:
+			b := strconv.FormatFloat(b.AsObj().AsNumber(), 'f', -1, 64)
+			a := vm.stack.Pop().(values.Value).AsObj().AsString().Chars
+			if op == "+" {
+				vm.stack.Push(values.ObjString{Chars: a + b, Length: len(a + b)})
+			}
 		}
+	case values.VAL_OBJ:
+		switch vm.stack.Peek().(values.Value).Type() {
+		case values.VAL_NUMBER:
+			b := b.AsObj().AsString().Chars
+			a := strconv.FormatFloat(vm.stack.Pop().(values.Value).AsNumber(), 'f', -1, 64)
+			if op == "+" {
+				vm.stack.Push(values.ObjString{Chars: a + b, Length: len(a + b)})
+			}
+
+		case values.VAL_OBJ:
+			b := b.AsObj().AsString().Chars
+			a := vm.stack.Pop().(values.Value).AsObj().AsString().Chars
+			if op == "+" {
+				vm.stack.Push(values.ObjString{Chars: a + b, Length: len(a + b)})
+			}
+		}
+	default:
+		vm.runtimeError("Operands must be numbers or strings")
 	}
 }
 

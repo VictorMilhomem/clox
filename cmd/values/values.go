@@ -1,6 +1,9 @@
 package values
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type (
 	NilVal    struct{}
@@ -41,7 +44,7 @@ func IsObj(v Value) bool {
 }
 
 func IsString(v Value) bool {
-	return v.AsObj().kind == OBJ_STRING
+	return v.AsObj().Kind == OBJ_STRING
 }
 
 /*================NIL VAL======================*/
@@ -126,13 +129,16 @@ func (obj Obj) AsObj() Obj {
 	return obj
 }
 
-func (obj Obj) PrinValue() {
-	fmt.Printf("%v", obj)
+func (obj Obj) PrintValue() {
+	switch obj.Type() {
+	case ValueType(OBJ_STRING):
+		fmt.Printf("%s", obj.AsString().Chars)
+	}
 }
 
 func (obj Obj) AsString() ObjString {
 	return ObjString{
-		obj: obj,
+		Obj: obj,
 	}
 }
 
@@ -170,6 +176,15 @@ func ValuesEqual(a Value, b Value) bool {
 		return true
 	case VAL_NUMBER:
 		return a.AsNumber() == b.AsNumber()
+	case VAL_OBJ:
+		vala := a.AsObj().AsString().Chars
+		valb := b.AsObj().AsString().Chars
+		comp := strings.Compare(vala, valb)
+		if comp == 0 {
+			return true
+		}
+		return false
+
 	default:
 		return false
 	}
