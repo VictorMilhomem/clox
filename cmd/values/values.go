@@ -10,6 +10,7 @@ type (
 	BoolVal   bool
 	NumberVal float64
 	ValueType int
+	StringVal string
 )
 
 const (
@@ -17,13 +18,14 @@ const (
 	VAL_NIL
 	VAL_NUMBER
 	VAL_OBJ
+	VAL_STR
 )
 
 type Value interface {
 	Type() ValueType
 	AsBoolean() bool
 	AsNumber() float64
-	AsObj() Obj
+	AsString() string
 	PrintValue()
 }
 
@@ -44,7 +46,7 @@ func IsObj(v Value) bool {
 }
 
 func IsString(v Value) bool {
-	return v.AsObj().Kind == OBJ_STRING
+	return v.Type() == VAL_STR
 }
 
 /*================NIL VAL======================*/
@@ -60,7 +62,7 @@ func (nv NilVal) AsNumber() float64 {
 	panic("nil value is not a number!")
 }
 
-func (nv NilVal) AsObj() Obj {
+func (nv NilVal) AsString() string {
 	panic("number value is not a boolean!")
 }
 
@@ -82,7 +84,7 @@ func (bv BoolVal) AsNumber() float64 {
 	panic("bool value is not a number!")
 }
 
-func (bv BoolVal) AsObj() Obj {
+func (bv BoolVal) AsString() string {
 	panic("bool value is not a obj!")
 }
 
@@ -104,7 +106,7 @@ func (nv NumberVal) AsNumber() float64 {
 	return float64(nv)
 }
 
-func (nv NumberVal) AsObj() Obj {
+func (nv NumberVal) AsString() string {
 	panic("number value is not a boolean!")
 }
 
@@ -113,33 +115,24 @@ func (nv NumberVal) PrintValue() {
 }
 
 /*================OBJ VAL======================*/
-func (obj Obj) Type() ValueType {
-	return VAL_OBJ
+func (str StringVal) Type() ValueType {
+	return VAL_STR
 }
 
-func (obj Obj) AsBoolean() bool {
+func (str StringVal) AsBoolean() bool {
 	panic("object value is not a boolean!")
 }
 
-func (obj Obj) AsNumber() float64 {
+func (str StringVal) AsNumber() float64 {
 	panic("object value is not a number!")
 }
 
-func (obj Obj) AsObj() Obj {
-	return obj
+func (str StringVal) AsString() string {
+	return string(str)
 }
 
-func (obj Obj) PrintValue() {
-	switch obj.Type() {
-	case ValueType(OBJ_STRING):
-		fmt.Printf("%s", obj.AsString().Chars)
-	}
-}
-
-func (obj Obj) AsString() ObjString {
-	return ObjString{
-		Obj: obj,
-	}
+func (str StringVal) PrintValue() {
+	fmt.Printf("%v", str)
 }
 
 /*================VALUE ARRAY======================*/
@@ -177,8 +170,8 @@ func ValuesEqual(a Value, b Value) bool {
 	case VAL_NUMBER:
 		return a.AsNumber() == b.AsNumber()
 	case VAL_OBJ:
-		vala := a.AsObj().AsString().Chars
-		valb := b.AsObj().AsString().Chars
+		vala := a.AsString()
+		valb := b.AsString()
 		comp := strings.Compare(vala, valb)
 		if comp == 0 {
 			return true

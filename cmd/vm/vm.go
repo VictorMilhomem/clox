@@ -141,50 +141,47 @@ func (vm *VM) runtimeError(format string, args ...interface{}) {
 
 func (vm *VM) binaryOp(op string) {
 	b := vm.stack.Pop().(values.Value)
-	switch b.Type() {
-	case values.VAL_NUMBER:
-		switch vm.stack.Peek().(values.Value).Type() {
-		case values.VAL_NUMBER:
-			b := b.AsNumber()
-			a := vm.stack.Pop().(values.Value).AsNumber()
-			switch op {
-			case "+":
-				vm.stack.Push(values.NumberVal(a + b))
-			case "-":
-				vm.stack.Push(values.NumberVal(a - b))
-			case "*":
-				vm.stack.Push(values.NumberVal(a * b))
-			case "/":
-				vm.stack.Push(values.NumberVal(a / b))
-			case ">":
-				vm.stack.Push(values.BoolVal(a > b))
-			case "<":
-				vm.stack.Push(values.BoolVal(a < b))
-			}
-
-		case values.VAL_OBJ:
-			b := strconv.FormatFloat(b.AsObj().AsNumber(), 'f', -1, 64)
-			a := vm.stack.Pop().(values.Value).AsObj().AsString().Chars
-			if op == "+" {
-				vm.stack.Push(values.ObjString{Chars: a + b, Length: len(a + b)})
-			}
+	a := vm.stack.Pop().(values.Value)
+	switch {
+	case values.IsNumber(b) && values.IsNumber(a):
+		a := a.AsNumber()
+		b := b.AsNumber()
+		switch op {
+		case "+":
+			vm.stack.Push(values.NumberVal(a + b))
+		case "-":
+			vm.stack.Push(values.NumberVal(a - b))
+		case "*":
+			vm.stack.Push(values.NumberVal(a * b))
+		case "/":
+			vm.stack.Push(values.NumberVal(a / b))
+		case ">":
+			vm.stack.Push(values.BoolVal(a > b))
+		case "<":
+			vm.stack.Push(values.BoolVal(a < b))
 		}
-	case values.VAL_OBJ:
-		switch vm.stack.Peek().(values.Value).Type() {
-		case values.VAL_NUMBER:
-			b := b.AsObj().AsString().Chars
-			a := strconv.FormatFloat(vm.stack.Pop().(values.Value).AsNumber(), 'f', -1, 64)
-			if op == "+" {
-				vm.stack.Push(values.ObjString{Chars: a + b, Length: len(a + b)})
-			}
-
-		case values.VAL_OBJ:
-			b := b.AsObj().AsString().Chars
-			a := vm.stack.Pop().(values.Value).AsObj().AsString().Chars
-			if op == "+" {
-				vm.stack.Push(values.ObjString{Chars: a + b, Length: len(a + b)})
-			}
+	case values.IsNumber(b) && values.IsString(a):
+		a := a.AsString()
+		b := strconv.FormatFloat(b.AsNumber(), 'f', -1, 64)
+		result := a + b
+		if op == "+" {
+			vm.stack.Push(values.StringVal(result))
 		}
+	case values.IsString(b) && values.IsNumber(a):
+		a := strconv.FormatFloat(a.AsNumber(), 'f', -1, 64)
+		b := b.AsString()
+		result := a + b
+		if op == "+" {
+			vm.stack.Push(values.StringVal(result))
+		}
+	case values.IsString(b) && values.IsString(a):
+		a := a.AsString()
+		b := b.AsString()
+		result := a + b
+		if op == "+" {
+			vm.stack.Push(values.StringVal(result))
+		}
+
 	default:
 		vm.runtimeError("Operands must be numbers or strings")
 	}
