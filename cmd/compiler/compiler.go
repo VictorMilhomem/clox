@@ -42,7 +42,7 @@ const (
 	PREC_PRIMARY
 )
 
-type ParseFn func()
+type ParseFn func(canAssign bool)
 
 type ParseRule struct {
 	prefix     ParseFn
@@ -71,7 +71,7 @@ func getRule(kind int) ParseRule {
 		TOKEN_GREATER_EQUAL: {nil, binary, PREC_COMPARISON},
 		TOKEN_LESS:          {nil, binary, PREC_COMPARISON},
 		TOKEN_LESS_EQUAL:    {nil, binary, PREC_COMPARISON},
-		TOKEN_IDENTIFIER:    {nil, nil, PREC_NONE},
+		TOKEN_IDENTIFIER:    {variable, nil, PREC_NONE},
 		TOKEN_STRING:        {str, nil, PREC_NONE},
 		TOKEN_NUMBER:        {number, nil, PREC_NONE},
 		TOKEN_AND:           {nil, nil, PREC_NONE},
@@ -189,12 +189,26 @@ func makeConstant(value values.Value) byte {
 	return byte(constant)
 }
 
-func str() {
+func variable(canAssign bool) {
+	namedVariable(p.previous, canAssign)
+}
+
+func namedVariable(name antlr.Token, canAssign bool) {
+	arg := identifierConstant(name)
+	if canAssign && match(TOKEN_EQUAL) {
+		expression()
+		emitBytes(byte(chunk.OpSetGlobal), arg)
+	} else {
+		emitBytes(byte(chunk.OpGetGlobal), arg)
+	}
+}
+
+func str(canAssign bool) {
 	str := strings.ReplaceAll(p.previous.GetText(), string('"'), "")
 	emitConstant(values.StringVal(str))
 }
 
-func literal() {
+func literal(canAssign bool) {
 	switch p.previous.GetTokenType() {
 	case TOKEN_FALSE:
 		emitByte(byte(chunk.OpFalse))
@@ -205,7 +219,7 @@ func literal() {
 	}
 }
 
-func number() {
+func number(canAssign bool) {
 	value, err := strconv.ParseFloat(p.previous.GetText(), 64)
 	if err != nil {
 		fmt.Printf("error parsing float: %s", p.previous.GetText())
@@ -214,12 +228,12 @@ func number() {
 	emitConstant(values.NumberVal(value))
 }
 
-func grouping() {
+func grouping(canAssign bool) {
 	expression()
 	consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression")
 }
 
-func unary() {
+func unary(canAssign bool) {
 	operatorType := p.previous.GetTokenType()
 
 	parsePrecedence(PREC_UNARY)
@@ -234,7 +248,7 @@ func unary() {
 	}
 }
 
-func binary() {
+func binary(canAssign bool) {
 	operatorType := p.previous.GetTokenType()
 	rule := getRule(operatorType)
 	parsePrecedence(rule.precedence + 1)
@@ -273,17 +287,108 @@ func parsePrecedence(precedence Precedence) {
 		err("expected expression")
 		return
 	}
-	prefixRule()
+	canAssign := precedence <= PREC_ASSIGNMENT
+
+	prefixRule(canAssign)
 
 	for precedence <= getRule(p.current.GetTokenType()).precedence {
 		advance()
 		infixRule := getRule(p.previous.GetTokenType()).infix
-		infixRule()
+		infixRule(canAssign)
 	}
+
+	if canAssign && match(TOKEN_EQUAL) {
+		err("Invalid assignment target")
+	}
+}
+
+func declaration() {
+	if match(TOKEN_VAR) {
+		varDeclaration()
+	} else {
+		statement()
+	}
+	if p.panicMode {
+		synchronize()
+	}
+}
+
+func varDeclaration() {
+	global := parseVariable("Expect variable name")
+
+	if match(TOKEN_EQUAL) {
+		expression()
+	} else {
+		emitByte(byte(chunk.OpNil))
+	}
+
+	consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration")
+	defineVariable(global)
+}
+
+func parseVariable(errorMsg string) byte {
+	consume(TOKEN_IDENTIFIER, errorMsg)
+	return identifierConstant(p.previous)
+}
+
+func identifierConstant(t antlr.Token) byte {
+	val := strings.ReplaceAll(t.GetText(), string('"'), "")
+	return makeConstant(values.StringVal(val))
+}
+
+func defineVariable(global byte) {
+	emitBytes(byte(chunk.OpDefineGlobal), global)
+}
+
+func statement() {
+	if match(TOKEN_PRINT) {
+		printStatement()
+	} else {
+		expressionStatement()
+	}
+}
+
+func expressionStatement() {
+	expression()
+	consume(TOKEN_SEMICOLON, "Expect ';' after expression")
+	emitByte(byte(chunk.OpPop))
+}
+
+func printStatement() {
+	expression()
+	consume(TOKEN_SEMICOLON, "Expect ';' after value")
+	emitByte(byte(chunk.OpPrint))
 }
 
 func expression() {
 	parsePrecedence(PREC_ASSIGNMENT)
+}
+
+func match(ttype int) bool {
+	if !check(ttype) {
+		return false
+	}
+	advance()
+	return true
+}
+
+func check(ttype int) bool {
+	return p.current.GetTokenType() == ttype
+}
+
+func synchronize() {
+	p.panicMode = false
+
+	for p.current.GetTokenType() != TOKEN_EOF {
+		if p.previous.GetTokenType() == TOKEN_SEMICOLON {
+			return
+		}
+		switch p.current.GetTokenType() {
+		case TOKEN_CLASS, TOKEN_FUN, TOKEN_VAR, TOKEN_FOR, TOKEN_IF, TOKEN_WHILE, TOKEN_PRINT, TOKEN_RETURN:
+			return
+		default:
+		}
+	}
 }
 
 func Compile(source *antlr.InputStream, chunk *chunk.Chunk) bool {
@@ -293,9 +398,11 @@ func Compile(source *antlr.InputStream, chunk *chunk.Chunk) bool {
 	p.hadError = false
 	p.panicMode = false
 	advance()
-	expression()
 
-	consume(p.scanner.EmitEOF().GetTokenType(), "Expect end of expression.")
+	for !match(p.scanner.EmitEOF().GetTokenType()) {
+		declaration()
+	}
+
 	endCompiler()
 	return !p.hadError
 }

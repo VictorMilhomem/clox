@@ -9,6 +9,7 @@ import (
 	"github.com/VictorMilhomem/golox/cmd/compiler"
 	"github.com/VictorMilhomem/golox/cmd/values"
 	"github.com/antlr4-go/antlr/v4"
+
 	"github.com/golang-collections/collections/stack"
 )
 
@@ -21,16 +22,18 @@ const (
 )
 
 type VM struct {
-	chunk chunk.Chunk
-	ip    byte
-	stack *stack.Stack
+	chunk   chunk.Chunk
+	ip      byte
+	stack   *stack.Stack
+	globals map[string]values.Value
 }
 
 func NewVm() *VM {
 	return &VM{
-		chunk: chunk.Chunk{},
-		ip:    0,
-		stack: stack.New(),
+		chunk:   chunk.Chunk{},
+		ip:      0,
+		stack:   stack.New(),
+		globals: make(map[string]values.Value),
 	}
 }
 
@@ -42,6 +45,7 @@ func (vm *VM) FreeVM() {
 	vm.chunk = chunk.Chunk{}
 	vm.ip = 0
 	vm.resetStack()
+	vm.globals = make(map[string]values.Value)
 }
 
 func (vm *VM) resetStack() {
@@ -117,11 +121,37 @@ func (vm *VM) run() InterpretResult {
 				value := vm.stack.Pop().(values.Value).AsNumber()
 				vm.stack.Push(values.NumberVal(-value))
 			}
-
-		case chunk.OpReturn:
-			value, _ := vm.stack.Pop().(values.Value)
+		case chunk.OpPrint:
+			value := vm.stack.Pop().(values.Value)
 			value.PrintValue()
 			fmt.Println()
+		case chunk.OpPop:
+			vm.stack.Pop()
+		case chunk.OpDefineGlobal:
+			constant := vm.readConstant()
+			if values.IsString(constant) {
+				vm.globals[constant.AsString()] = vm.stack.Peek().(values.Value)
+			}
+			vm.stack.Pop()
+		case chunk.OpGetGlobal:
+			name := vm.readConstant().AsString()
+			val, ok := vm.globals[name]
+			if !ok {
+				vm.runtimeError("Undefined variable '%s'", name)
+				return IntepretRuntimeError
+			}
+			vm.stack.Push(val)
+		case chunk.OpSetGlobal:
+			name := vm.readConstant().AsString()
+			var ok bool
+			vm.globals[name], ok = vm.stack.Peek().(values.Value)
+			if !ok {
+				vm.globals[name] = nil
+				vm.runtimeError("Undefined variable '%s'", name)
+				return IntepretRuntimeError
+			}
+
+		case chunk.OpReturn:
 			return IntepretOk
 		}
 	}

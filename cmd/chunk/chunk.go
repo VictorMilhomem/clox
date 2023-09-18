@@ -22,6 +22,11 @@ const (
 	OpDivide
 	OpNot
 	OpNegate
+	OpPrint
+	OpPop
+	OpDefineGlobal
+	OpGetGlobal
+	OpSetGlobal
 	OpReturn
 )
 
@@ -116,6 +121,16 @@ func (c *Chunk) DisassembleInstruction(offset int) int {
 		return simpleInstruction("OP_NEGATE", offset)
 	case byte(OpNot):
 		return simpleInstruction("OP_NOT", offset)
+	case byte(OpPrint):
+		return simpleInstruction("OP_PRINT", offset)
+	case byte(OpPop):
+		return simpleInstruction("OP_POP", offset)
+	case byte(OpDefineGlobal):
+		return constantInstruction("OP_DEFINE_GLOBAL", c, offset)
+	case byte(OpGetGlobal):
+		return constantInstruction("OP_GET_GLOBAL", c, offset)
+	case byte(OpSetGlobal):
+		return constantInstruction("OP_SET_GLOBAL", c, offset)
 	case byte(OpReturn):
 		return simpleInstruction("OP_RETURN", offset)
 	default:
