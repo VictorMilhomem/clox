@@ -3,6 +3,7 @@ package vm
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/VictorMilhomem/golox/cmd/chunk"
 	"github.com/VictorMilhomem/golox/cmd/compiler"
@@ -139,27 +140,50 @@ func (vm *VM) runtimeError(format string, args ...interface{}) {
 }
 
 func (vm *VM) binaryOp(op string) {
-	if !values.IsNumber(vm.stack.Peek().(values.Value)) {
-		vm.runtimeError("operands must be numbers")
-	} else {
-		b := vm.stack.Pop().(values.Value).AsNumber()
-		if values.IsNumber(vm.stack.Peek().(values.Value)) {
-			a := vm.stack.Pop().(values.Value).AsNumber()
-			switch op {
-			case "+":
-				vm.stack.Push(values.NumberVal(a + b))
-			case "-":
-				vm.stack.Push(values.NumberVal(a - b))
-			case "*":
-				vm.stack.Push(values.NumberVal(a * b))
-			case "/":
-				vm.stack.Push(values.NumberVal(a / b))
-			case ">":
-				vm.stack.Push(values.BoolVal(a > b))
-			case "<":
-				vm.stack.Push(values.BoolVal(a < b))
-			}
+	b := vm.stack.Pop().(values.Value)
+	a := vm.stack.Pop().(values.Value)
+	switch {
+	case values.IsNumber(b) && values.IsNumber(a):
+		a := a.AsNumber()
+		b := b.AsNumber()
+		switch op {
+		case "+":
+			vm.stack.Push(values.NumberVal(a + b))
+		case "-":
+			vm.stack.Push(values.NumberVal(a - b))
+		case "*":
+			vm.stack.Push(values.NumberVal(a * b))
+		case "/":
+			vm.stack.Push(values.NumberVal(a / b))
+		case ">":
+			vm.stack.Push(values.BoolVal(a > b))
+		case "<":
+			vm.stack.Push(values.BoolVal(a < b))
 		}
+	case values.IsNumber(b) && values.IsString(a):
+		a := a.AsString()
+		b := strconv.FormatFloat(b.AsNumber(), 'f', -1, 64)
+		result := a + b
+		if op == "+" {
+			vm.stack.Push(values.StringVal(result))
+		}
+	case values.IsString(b) && values.IsNumber(a):
+		a := strconv.FormatFloat(a.AsNumber(), 'f', -1, 64)
+		b := b.AsString()
+		result := a + b
+		if op == "+" {
+			vm.stack.Push(values.StringVal(result))
+		}
+	case values.IsString(b) && values.IsString(a):
+		a := a.AsString()
+		b := b.AsString()
+		result := a + b
+		if op == "+" {
+			vm.stack.Push(values.StringVal(result))
+		}
+
+	default:
+		vm.runtimeError("Operands must be numbers or strings")
 	}
 }
 

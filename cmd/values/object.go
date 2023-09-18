@@ -1,17 +1,13 @@
 package values
 
-type ObjType int
-
-const (
-	OBJ_STRING ObjType = iota
-)
-
-type Obj struct {
-	kind ObjType
+type ObjString struct {
+	Length int
+	Chars  string
 }
 
-type ObjString struct {
-	obj    Obj
-	length int
-	chars  []rune
+func CopyString(chars string) *ObjString {
+	return &ObjString{
+		Length: len(chars),
+		Chars:  chars,
+	}
 }
